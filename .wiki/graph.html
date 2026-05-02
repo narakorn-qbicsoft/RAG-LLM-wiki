@@ -1,0 +1,70 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Wiki Graph</title>
+<style>
+body{margin:0;background:#0f172a;color:#e2e8f0;font-family:Inter,sans-serif;}
+nav{background:#1e293b;padding:12px 24px;border-bottom:1px solid #334155;}
+nav a{color:#60a5fa;margin-right:16px;text-decoration:none;font-weight:600;}
+#wrap{display:flex;height:calc(100vh - 50px);}
+#chart{flex:1;background:#0f172a;}
+#info{width:300px;background:#1e293b;border-left:1px solid #334155;padding:18px;overflow:auto;}
+.node text{fill:#e2e8f0;font-size:11px;pointer-events:none;}
+.node circle{stroke:#0f172a;stroke-width:2px;cursor:pointer;}
+.link{stroke:#475569;stroke-opacity:.5;}
+.tag{display:inline-block;background:#334155;color:#cbd5e1;padding:2px 8px;border-radius:10px;font-size:.78em;margin:0 4px 4px 0;}
+h2{color:#f1f5f9;margin-top:0;}
+</style>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+</head><body>
+<nav><a href="/">📚 Pages</a><a href="/graph">🕸️ Graph</a><a href="/sync">🔁 Sync</a></nav>
+<div id="wrap"><svg id="chart"></svg><div id="info"><h2>🕸️ Graph</h2><p>Click a node to inspect.</p></div></div>
+<script>
+const TAG_COLORS = {
+  overview:"#60a5fa", architecture:"#60a5fa", tech:"#34d399", python:"#34d399", flask:"#34d399",
+  pipeline:"#f472b6", rag:"#f472b6", api:"#fbbf24", http:"#fbbf24", ui:"#a78bfa", html:"#a78bfa",
+  database:"#22d3ee", sqlite:"#22d3ee", faiss:"#22d3ee", storage:"#22d3ee",
+  gemini:"#fb7185", auth:"#ef4444", security:"#ef4444",
+  deployment:"#84cc16", ops:"#84cc16", config:"#84cc16",
+  conventions:"#94a3b8", meta:"#94a3b8", libraries:"#34d399", other:"#cbd5e1"
+};
+const colorOf = t => TAG_COLORS[t] || "#cbd5e1";
+
+fetch("/graph.json").then(r => r.json()).then(data => {
+  const w = document.getElementById("chart").clientWidth, h = document.getElementById("chart").clientHeight;
+  const svg = d3.select("#chart").attr("viewBox", [0,0,w,h]);
+  const g = svg.append("g");
+  svg.call(d3.zoom().scaleExtent([0.3,4]).on("zoom", e => g.attr("transform", e.transform)));
+
+  const sim = d3.forceSimulation(data.nodes)
+    .force("link", d3.forceLink(data.links).id(d => d.id).distance(120))
+    .force("charge", d3.forceManyBody().strength(-350))
+    .force("center", d3.forceCenter(w/2, h/2))
+    .force("collide", d3.forceCollide(28));
+
+  const link = g.append("g").selectAll("line").data(data.links).join("line")
+    .attr("class","link").attr("stroke-width",1.4);
+
+  const node = g.append("g").selectAll("g").data(data.nodes).join("g").attr("class","node")
+    .call(d3.drag()
+      .on("start", (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on("drag",  (e,d) => { d.fx=e.x; d.fy=e.y; })
+      .on("end",   (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }));
+
+  node.append("circle").attr("r",16).attr("fill", d => colorOf(d.tag))
+    .on("click", (e,d) => showInfo(d));
+  node.append("text").attr("x",20).attr("y",4).text(d => d.title);
+
+  sim.on("tick", () => {
+    link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+    node.attr("transform", d => `translate(${d.x},${d.y})`);
+  });
+
+  function showInfo(d) {
+    const tags = (d.tags||[]).map(t => `<span class="tag" style="background:${colorOf(t)}33;color:${colorOf(t)}">${t}</span>`).join("");
+    document.getElementById("info").innerHTML =
+      `<h2>${d.title}</h2><div>${tags}</div>
+       <p><a href="/view/${d.id}" style="color:#60a5fa">📄 Open page →</a></p>
+       <p style="color:#94a3b8;font-size:.85em">file: <code>${d.id}</code></p>`;
+  }
+});
+</script>
+</body></html>

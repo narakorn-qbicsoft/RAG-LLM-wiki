@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chat — Advanced RAG Document Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon"><i class="fas fa-brain"></i></div>
+          <div class="logo-text">
+            <h1>AI Chat</h1>
+            <span>Advanced RAG</span>
+          </div>
+        </div>
+        <button class="sidebar-close" id="sidebarClose" title="Hide"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-title"><i class="fas fa-cloud-upload-alt"></i> Upload Documents</div>
+        <div class="upload-zone" id="uploadZone">
+          <i class="fas fa-file-upload upload-icon"></i>
+          <p>Drag files here or <b>Click</b></p>
+          <span class="upload-hint">PDF, Word, Excel, TXT (max 50MB)</span>
+          <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls,.md,.json" hidden>
+        </div>
+        <div class="upload-progress" id="uploadProgress" style="display:none">
+          <div class="progress-header">
+            <span class="progress-label" id="progressLabel">Uploading...</span>
+            <span class="progress-pct" id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-eta" id="progressEta"></div>
+          <div class="pipeline-steps" id="pipelineSteps"></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-title">
+          <span><i class="fas fa-folder-open"></i> Documents <span class="doc-count" id="docCount">0</span></span>
+        </div>
+        <div class="doc-list" id="docList">
+          <div class="doc-empty"><i class="fas fa-inbox"></i><br>No documents yet</div>
+        </div>
+      </div>
+      <div class="sidebar-section sidebar-stats" id="statsSection" style="display:none">
+        <div class="stat-row"><span><i class="fas fa-file-alt"></i> Documents</span><b id="statDocs">0</b></div>
+        <div class="stat-row"><span><i class="fas fa-font"></i> Total Words</span><b id="statWords">0</b></div>
+        <div class="stat-row"><span><i class="fas fa-puzzle-piece"></i> Chunks</span><b id="statChunks">0</b></div>
+        <div class="stat-row"><span><i class="fas fa-microchip"></i> AI Engine</span><b id="statAI">—</b></div>
+      </div>
+      <div class="sidebar-footer">
+        <button class="btn-clear-chat" id="btnClearChat" title="Clear Chat">
+          <i class="fas fa-broom"></i> Clear Chat History
+        </button>
+        <div class="powered-by">Powered by <b>Narakorn</b></div>
+      </div>
+    </aside>
+    <!-- Main Chat -->
+    <main class="chat-main">
+      <header class="chat-header">
+        <button class="btn-menu" id="btnMenu" title="Menu"><i class="fas fa-bars"></i></button>
+        <div class="chat-header-info">
+          <h2><i class="fas fa-robot"></i> AI Document Chat</h2>
+          <span class="header-status" id="headerStatus">
+            <span class="status-dot"></span> Ready <span id="sessionBadge" style="margin-left:.5rem;font-size:.75rem;color:#888"></span>
+          </span>
+        </div>
+        <div class="chat-header-actions">
+          <a href="/about" target="_blank" class="btn-icon" id="btnAbout" title="About / Download / Install" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center"><i class="fas fa-circle-info"></i></a>
+          <button class="btn-icon" id="btnWiki" title="Document Wiki"><i class="fas fa-book"></i></button>
+          <button class="btn-icon" id="btnSettings" title="Settings / API Keys"><i class="fas fa-cog"></i></button>
+          <button class="btn-icon" id="btnNewChat" title="New Chat"><i class="fas fa-plus"></i></button>
+        </div>
+      </header>
+      <div class="chat-messages" id="chatMessages">
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-icon">
+            <div class="welcome-icon-ring"><i class="fas fa-brain"></i></div>
+          </div>
+          <h2>AI Chat — Advanced RAG</h2>
+          <p>Intelligent AI Document Analysis — Ask anything!</p>
+          <div class="welcome-features">
+            <div class="feature-card">
+              <i class="fas fa-file-upload"></i>
+              <h4>Upload Documents</h4>
+              <p>PDF, Word, Excel, TXT and more</p>
+            </div>
+            <div class="feature-card">
+              <i class="fas fa-brain"></i>
+              <h4>Advanced RAG</h4>
+              <p>Smart search + Deep AI analysis</p>
+            </div>
+            <div class="feature-card">
+              <i class="fas fa-comments"></i>
+              <h4>Smart Chat</h4>
+              <p>Natural Q&A with context memory</p>
+            </div>
+          </div>
+          <div class="welcome-suggestions">
+            <span class="suggestion-label">Try asking:</span>
+            <div class="suggestions">
+              <button class="suggestion-btn" data-q="Summarize all documents">📋 Summarize All</button>
+              <button class="suggestion-btn" data-q="Find key points in documents">🔍 Key Points</button>
+              <button class="suggestion-btn" data-q="What important numbers are in the documents">📊 Key Numbers</button>
+              <button class="suggestion-btn" data-q="Analyze risks from the documents">⚠️ Risk Analysis</button>
+              <button class="suggestion-btn" data-q="AI recommendations">💡 Recommendations</button>
+              <button class="suggestion-btn" data-q="Compare data across all documents">📑 Compare Data</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="quick-actions" id="quickActions">
+          <button class="quick-btn" data-q="Summarize documents"><i class="fas fa-list-alt"></i> Summarize</button>
+          <button class="quick-btn" data-q="Find key points"><i class="fas fa-search"></i> Key Points</button>
+          <button class="quick-btn" data-q="Analyze risks"><i class="fas fa-exclamation-triangle"></i> Risks</button>
+          <button class="quick-btn" data-q="Important numbers"><i class="fas fa-chart-bar"></i> Numbers</button>
+        </div>
+        <div class="input-box">
+          <textarea id="chatInput" placeholder="Ask anything about your documents..." rows="1"></textarea>
+          <button class="btn-send" id="btnSend" title="Send"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div class="input-footer"><span>AI may produce inaccurate information. Please verify with source documents.</span></div>
+      </div>
+    </main>
+  </div>
+  <div class="toast-container" id="toastContainer"></div>
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="previewTitle">Document Preview</h3>
+        <button class="modal-close" id="previewClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="previewBody"></div>
+    </div>
+  </div>
+
+  <!-- Setup / API Key Modal -->
+  <div class="modal-overlay" id="setupModal">
+    <div class="modal-content setup-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-key"></i> API Key Setup</h3>
+        <button class="modal-close" id="setupClose" title="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="setupBody">
+        <div class="setup-intro">
+          <p><b>This app needs your own Google Gemini API key</b> to extract, embed and answer questions. Keys are stored locally in your <code>.env</code> file and never leave your machine.</p>
+          <ol class="setup-steps">
+            <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Google AI Studio → Get API Key</a></li>
+            <li>Sign in with a Google account and click <b>Create API key</b></li>
+            <li>Copy the key (starts with <code>AIza...</code>) and paste below</li>
+            <li>Optional: add up to 5 keys to raise the rate limit (parallel rotation)</li>
+          </ol>
+        </div>
+        <form id="setupForm" class="setup-form">
+          <div class="setup-row" data-slot="GEMINI_API_KEY">
+            <label>Key #1 <span class="required">*</span></label>
+            <div class="setup-input">
+              <input type="password" name="GEMINI_API_KEY" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+              <button type="button" class="btn-eye" title="Show/Hide"><i class="fas fa-eye"></i></button>
+              <button type="button" class="btn-test" title="Test key">Test</button>
+            </div>
+            <div class="setup-status"></div>
+          </div>
+          <div class="setup-row" data-slot="GEMINI_API_KEY_2">
+            <label>Key #2 <span class="optional">(optional)</span></label>
+            <div class="setup-input">
+              <input type="password" name="GEMINI_API_KEY_2" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+              <button type="button" class="btn-eye"><i class="fas fa-eye"></i></button>
+              <button type="button" class="btn-test">Test</button>
+            </div>
+            <div class="setup-status"></div>
+          </div>
+          <div class="setup-row" data-slot="GEMINI_API_KEY_3">
+            <label>Key #3 <span class="optional">(optional)</span></label>
+            <div class="setup-input">
+              <input type="password" name="GEMINI_API_KEY_3" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+              <button type="button" class="btn-eye"><i class="fas fa-eye"></i></button>
+              <button type="button" class="btn-test">Test</button>
+            </div>
+            <div class="setup-status"></div>
+          </div>
+          <div class="setup-row" data-slot="GEMINI_API_KEY_4">
+            <label>Key #4 <span class="optional">(optional)</span></label>
+            <div class="setup-input">
+              <input type="password" name="GEMINI_API_KEY_4" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+              <button type="button" class="btn-eye"><i class="fas fa-eye"></i></button>
+              <button type="button" class="btn-test">Test</button>
+            </div>
+            <div class="setup-status"></div>
+          </div>
+          <div class="setup-row" data-slot="GEMINI_API_KEY_5">
+            <label>Key #5 <span class="optional">(optional)</span></label>
+            <div class="setup-input">
+              <input type="password" name="GEMINI_API_KEY_5" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+              <button type="button" class="btn-eye"><i class="fas fa-eye"></i></button>
+              <button type="button" class="btn-test">Test</button>
+            </div>
+            <div class="setup-status"></div>
+          </div>
+          <div class="setup-actions">
+            <button type="submit" class="btn-save"><i class="fas fa-save"></i> Save Keys</button>
+            <span class="setup-hint">Saved to <code id="setupEnvPath">.env</code> on the server (chmod 600).</span>
+          </div>
+        </form>
+        <div class="setup-footer">
+          <p><b>Privacy:</b> Your API keys never leave your server. This app stores them in a local <code>.env</code> file readable only by the owner. To remove a key, clear its field and Save.</p>
+          <p><b>Pricing:</b> Gemini has a free tier (see <a href="https://ai.google.dev/pricing" target="_blank" rel="noopener">ai.google.dev/pricing</a>). For heavy use, consider a paid plan or rotating multiple keys.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- First-Run Blocking Overlay -->
+  <div class="firstrun-overlay" id="firstRunOverlay" style="display:none">
+    <div class="firstrun-card">
+      <div class="firstrun-icon"><i class="fas fa-key"></i></div>
+      <h2>Welcome — Let's set up your API key</h2>
+      <p>This app uses <b>Google Gemini</b> to power document understanding and chat. It does not ship with any API key — you'll provide your own (free tier available).</p>
+      <button class="firstrun-btn" id="firstRunBtn"><i class="fas fa-arrow-right"></i> Open Setup</button>
+      <p class="firstrun-help">Don't have one? <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key from Google AI Studio →</a></p>
+    </div>
+  </div>
+
+  <!-- Document Wiki Modal -->
+  <div class="modal-overlay" id="wikiModal">
+    <div class="modal-content wiki-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-book"></i> Document Wiki <span class="wiki-subtitle" id="wikiSubtitle">Auto-generated knowledge base</span></h3>
+        <div class="wiki-header-actions">
+          <button class="btn-icon" id="wikiBack" title="Back to index" style="display:none"><i class="fas fa-arrow-left"></i></button>
+          <button class="btn-icon" id="wikiRebuildAll" title="Rebuild index"><i class="fas fa-sync"></i></button>
+          <button class="modal-close" id="wikiClose"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div class="modal-body" id="wikiBody">
+        <div class="wiki-loading"><i class="fas fa-spinner fa-spin"></i> Loading wiki...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
